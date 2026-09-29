@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException, status, Query, HTMLResponse
+from fastapi import FastAPI, HTTPException, status, Query
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List
