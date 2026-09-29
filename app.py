@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, status, Query
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List
 from datetime import datetime
@@ -11,6 +12,13 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/documentacion",  # Ahora entras desde /documentacion en vez de /docs
     redoc_url=None
+)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # Permite que cualquier pantalla web se conecte
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # --- 1. MODELOS DE DATOS (Esquemas) ---
