@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Concordia Alerta - Mapa en Vivo</title>
+    <!-- CSS de Leaflet (Para el mapa) -->
+    <link rel="stylesheet" href="https://unpkg.com" />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        header {
+            background-color: #1f2937;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        #contenedor {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 60px);
+        }
+        #mapa {
+            flex: 3;
+            height: 100%;
+        }
+        #panel-lateral {
+            flex: 1;
+            background: #f3f4f6;
+            padding: 20px;
+            overflow-y: auto;
+            border-left: 1px solid #e5e7eb;
+            max-width: 350px;
+        }
+        .tarjeta-alerta {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-left: 5px solid #ef4444;
+        }
+        .tarjeta-alerta h4 {
+            margin: 0 0 5px 0;
+            color: #111827;
+        }
+        .tarjeta-alerta p {
+            margin: 5px 0;
+            font-size: 0.9rem;
+            color: #4b5563;
+        }
+        .boton-recargar {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .boton-recargar:hover {
+            background-color: #2563eb;
+        }
+    </style>
+</head>
+<body>
+
+    <header>📍 Concordia Alerta - Panel Vecinal en Vivo</header>
+
+    <div id="contenedor">
+        <!-- El mapa de Concordia -->
+        <div id="mapa"></div>
+
+        <!-- Panel lateral con la lista de alertas -->
+        <div id="panel-lateral">
+            <button class="boton-recargar" onclick="cargarAlertas()">🔄 Actualizar Alertas</button>
+            <div id="lista-alertas">
+                <p style="color: #6b7280; text-align: center;">Cargando incidencias de la ciudad...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script de Leaflet (Para el mapa) - ¡CORREGIDO! -->
+    <script src="https://unpkg.com"></script>
+    <script>
+        // Tu URL de Render Real - ¡CORREGIDO!
+        const API_URL = "https://onrender.com";
+
+        // Inicializamos el mapa centrado en la Plaza 25 de Mayo de Concordia
+        const mapa = L.map('mapa').setView([-31.3922, -58.0208], 14);
+
+        // Cargamos los gráficos del mapa desde OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(mapa);
+
+        // Capa para agrupar los pines y poder borrarlos/actualizarlos
+        let capaPines = L.layerGroup().addTo(mapa);
+
+        // Función para consultar las alertas a tu servidor de Render
+        async function cargarAlertas() {
+            const listaContenedor = document.getElementById('lista-alertas');
+            
+            try {
+                // Consultamos las alertas usando las coordenadas del centro como punto de partida (Radio 10km)
+                const respuesta = await fetch(`${API_URL}/alertas/cercanas/?latitud=-31.3922&longitud=-58.0208&radio_km=10`);
+                const alertas = await respuesta.json();
+
+                // Limpiamos los pines viejos del mapa y del panel
+                capaPines.clearLayers();
+                listaContenedor.innerHTML = "";
+
+                if (alertas.length === 0) {
+                    listaContenedor.innerHTML = '<p style="color: #6b7280; text-align: center;">No hay alertas activas en Concordia en este momento.</p>';
+                    return;
+                }
+
+                // Recorremos las alertas que nos envió Render
+                alertas.forEach(alerta => {
+                    // 1. Creamos el Pin Rojo en el mapa
+                    const pin = L.marker([alerta.latitud, alerta.longitud])
+                        .bindPopup(`<b>🚨 ${alerta.tipo}</b><br>${alerta.descripcion}`);
+                    capaPines.addLayer(pin);
+
+                    // 2. Creamos la tarjeta visual para el panel lateral
+                    const tarjeta = document.createElement('div');
+                    tarjeta.className = 'tarjeta-alerta';
+                    tarjeta.innerHTML = `
+                        <h4>🚨 ${alerta.tipo}</h4>
+                        <p>${alerta.descripcion}</p>
+                        <small style="color: #9ca3af;">Usuario ID: ${alerta.usuario_id}</small>
+                    `;
+                    
+                    // Al hacer clic en la tarjeta del panel, el mapa se mueve automáticamente a esa alerta
+                    tarjeta.style.cursor = "pointer";
+                    tarjeta.onclick = () => {
+                        mapa.setView([alerta.latitud, alerta.longitud], 16);
+                        pin.openPopup();
+                    };
+
+                    listaContenedor.appendChild(tarjeta);
+                });
+
+            } catch (error) {
+                console.error("Error al conectar con la API:", error);
+                listaContenedor.innerHTML = '<p style="color: #ef4444; text-align: center;">Error al conectar con el servidor de Render.</p>';
+            }
+        }
+
+        // Ejecutar la carga automática al abrir la página
+        cargarAlertas();
+    </script>
+</body>
+</html>

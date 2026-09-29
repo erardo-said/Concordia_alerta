@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, status, Query
+from fastapi import FastAPI, HTTPException, status, Query, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List
@@ -57,16 +57,13 @@ def calcular_distancia_km(lat1, lon1, lat2, lon2):
 
 # --- 4. RUTAS DE LA API (Endpoints) ---
 
-@app.get("/", tags=["General"], summary="Página de inicio de la API")
+@app.get("/", tags=["General"], summary="Página de inicio con el Mapa")
 def inicio():
-    return {"mensaje": "Bienvenido a Concordia Alerta API. Entra a /documentacion para interactuar."}
-
-@app.post("/usuarios/", response_model=Usuario, status_code=status.HTTP_201_CREATED, tags=["Usuarios"], summary="Registrar un nuevo usuario")
-def registrar_usuario(usuario: Usuario):
-    if any(u.id == usuario.id for u in BASE_DATOS_USUARIOS):
-        raise HTTPException(status_code=400, detail="El ID de usuario ya está registrado.")
-    BASE_DATOS_USUARIOS.append(usuario)
-    return usuario
+    try:
+        with open("mapa.html", "r", encoding="utf-8") as archivo:
+            return HTMLResponse(content=archivo.read())
+    except FileNotFoundError:
+        return {"mensaje": "Bienvenido a Concordia Alerta API. El archivo mapa.html no se encuentra en el servidor."}
 
 @app.post("/alertas/", response_model=AlertaRespuesta, status_code=status.HTTP_201_CREATED, tags=["Alertas"], summary="Crear una nueva alerta de emergencia")
 def crear_alerta(alerta: AlertaBase):
